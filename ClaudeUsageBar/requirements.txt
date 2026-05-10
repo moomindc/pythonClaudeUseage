@@ -1,0 +1,8 @@
+# Claude Usage Bar — Python dependencies
+# Tested on Python 3.14.2, Windows 11
+# Install with:  py -m pip install -r requirements.txt
+
+PyQt6>=6.6.0          # GUI framework (frameless window, custom paint)
+requests>=2.31.0      # HTTP calls to claude.ai internal API
+pystray>=0.19.5       # Windows system tray icon (no pywin32 required)
+Pillow>=10.0.0        # Tray icon generation (used by pystray)
