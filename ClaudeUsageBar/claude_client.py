@@ -1,7 +1,15 @@
+# claude_client.py
+# Handles all HTTP communication with the claude.ai website. Provides stateless helper
+# functions to fetch the user's organisation list and current usage data, using the
+# browser session cookie for authentication.
+
 import requests
 from datetime import datetime
 from typing import Optional, Tuple
 
+# BASE and _HEADERS
+# The root URL and HTTP request headers that mimic a real browser visit. Claude.ai
+# checks these headers, so they must look like a normal Chrome browser request.
 BASE = "https://claude.ai"
 
 _HEADERS = {
@@ -16,10 +24,16 @@ _HEADERS = {
 }
 
 
+# AuthError
+# A custom exception raised whenever the server returns a 401 or 403 status code,
+# signalling that the session key is missing, wrong, or has expired.
 class AuthError(Exception):
     pass
 
 
+# _session
+# Builds a pre-configured requests.Session that carries the browser-like headers and
+# injects the sessionKey cookie so every request is authenticated automatically.
 def _session(session_key: str) -> requests.Session:
     s = requests.Session()
     s.headers.update(_HEADERS)
@@ -27,6 +41,10 @@ def _session(session_key: str) -> requests.Session:
     return s
 
 
+# get_organizations
+# Calls the claude.ai organisations endpoint and returns the list of organisations the
+# session key has access to. Raises AuthError if the key is invalid, or a standard
+# requests exception if the network call fails.
 def get_organizations(session_key: str) -> list:
     r = _session(session_key).get(f"{BASE}/api/organizations", timeout=10)
     if r.status_code in (401, 403):
@@ -42,6 +60,9 @@ def get_organizations(session_key: str) -> list:
     return []
 
 
+# get_usage
+# Fetches the raw usage JSON for the given organisation from the claude.ai API. The
+# returned dict contains the five-hour window data that parse_usage then extracts.
 def get_usage(session_key: str, org_id: str) -> dict:
     r = _session(session_key).get(
         f"{BASE}/api/organizations/{org_id}/usage", timeout=10
@@ -52,8 +73,11 @@ def get_usage(session_key: str, org_id: str) -> dict:
     return r.json()
 
 
+# parse_usage
+# Extracts the two values the app actually needs from the raw usage dictionary:
+# the current utilisation as a 0–100 float, and the UTC datetime when the five-hour
+# window resets. Returns None for reset_at if the value is absent or unparseable.
 def parse_usage(usage: dict) -> Tuple[float, Optional[datetime]]:
-    """Return (utilization_pct 0–100, reset_at UTC datetime or None)."""
     five_hour = usage.get("five_hour") or {}
     pct = float(five_hour.get("utilization") or 0.0)
     reset_at: Optional[datetime] = None

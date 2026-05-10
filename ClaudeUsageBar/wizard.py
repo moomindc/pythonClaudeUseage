@@ -1,3 +1,8 @@
+# wizard.py
+# Provides the three-page setup wizard shown on first run and whenever the user chooses
+# "Reconfigure". The wizard walks the user through pasting their browser session key,
+# tests the connection, and saves the credentials to the config file.
+
 from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import (
     QApplication,
@@ -16,7 +21,14 @@ import claude_client
 import config as cfg_mod
 
 
+# WizardDialog
+# A modal dialog that guides the user through configuring the app. It uses a
+# QStackedWidget to show one of three pages at a time: Welcome (0), Key entry (1),
+# and Done (2).
 class WizardDialog(QDialog):
+    # __init__
+    # Initialises the dialog with a fixed width, marks it as modal (blocks the rest
+    # of the UI while open), and builds the page stack.
     def __init__(self, cfg: dict, parent=None) -> None:
         super().__init__(parent)
         self._cfg = cfg
@@ -25,6 +37,9 @@ class WizardDialog(QDialog):
         self.setModal(True)
         self._build()
 
+    # _build
+    # Creates the QStackedWidget that holds all three pages and adds it to the dialog
+    # layout. Pages are referenced by index: 0 = Welcome, 1 = Key, 2 = Done.
     def _build(self) -> None:
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -38,6 +53,9 @@ class WizardDialog(QDialog):
     # Page 0 — Welcome
     # ------------------------------------------------------------------ #
 
+    # _page_welcome
+    # Builds the first page shown to the user: a brief explanation of what the app
+    # does and a "Get Started" button that advances to the key-entry page.
     def _page_welcome(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
@@ -67,6 +85,10 @@ class WizardDialog(QDialog):
     # Page 1 — Session key
     # ------------------------------------------------------------------ #
 
+    # _page_key
+    # Builds the second page where the user pastes their browser session cookie value.
+    # Shows step-by-step instructions for finding the cookie in Chrome DevTools, a
+    # password-masked input field, and a "Test & Connect" button.
     def _page_key(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
@@ -82,6 +104,9 @@ class WizardDialog(QDialog):
             "1.  Open  https://claude.ai  and confirm you're logged in\n"
             "2.  Press F12  →  Application tab  →  Cookies  →  https://claude.ai\n"
             "3.  Find the cookie named  sessionKey  and copy its  Value"
+            "4. in (Chrome / Edge) go to the Application tab or (Firefox) Storage tab.\n"
+            "5. The cookie is named `sessionKey` its value starts with `sk - ant - sid01 - `\n"
+            "6. Copy the entire value (it's long — use Ctrl+A to select all in the Value field)\n"
         )
         steps.setWordWrap(True)
         lay.addWidget(steps)
@@ -114,6 +139,12 @@ class WizardDialog(QDialog):
         lay.addLayout(row)
         return page
 
+    # _test
+    # Called when the user clicks "Test & Connect". Validates that the field is not
+    # empty, disables the button to prevent double-clicks, then calls the claude.ai API
+    # to verify the key and discover the organisation ID. On success the credentials
+    # are saved and the wizard advances to the Done page. On failure a descriptive
+    # error message is shown in the status label.
     def _test(self) -> None:
         key = self._key_field.text().strip()
         if not key:
@@ -158,6 +189,10 @@ class WizardDialog(QDialog):
     # Page 2 — Done
     # ------------------------------------------------------------------ #
 
+    # _page_done
+    # Builds the final confirmation page shown after a successful connection test.
+    # Tells the user their key has been saved and provides a "Start Monitoring" button
+    # that closes the dialog with an Accepted result, triggering the main app to start.
     def _page_done(self) -> QWidget:
         page = QWidget()
         lay = QVBoxLayout(page)
