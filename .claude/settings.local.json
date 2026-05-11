@@ -7,7 +7,11 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(python -m pip install -r requirements.txt --quiet)",
-      "PowerShell(cd \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\\\\ClaudeUsageBar\"; foreach \\($f in @\\(\"config.py\",\"claude_client.py\",\"bar_window.py\",\"wizard.py\",\"tray.py\",\"main.py\"\\)\\) { Write-Host \"--- $f ---\"; py -m py_compile $f; if \\($?\\) { Write-Host \"OK\" } })"
+      "PowerShell(cd \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\\\\ClaudeUsageBar\"; foreach \\($f in @\\(\"config.py\",\"claude_client.py\",\"bar_window.py\",\"wizard.py\",\"tray.py\",\"main.py\"\\)\\) { Write-Host \"--- $f ---\"; py -m py_compile $f; if \\($?\\) { Write-Host \"OK\" } })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\\\\ClaudeUsageBar\" -Recurse | Where-Object { $_.Extension -in @\\('.ico', '.png', '.jpg', '.jpeg', '.gif', '.bmp'\\) } | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Filter \"setup.py\", \"pyproject.toml\", \"setup.cfg\" | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | Where-Object { $_.Name -in @\\('setup.py', 'pyproject.toml', 'setup.cfg'\\) } | ForEach-Object { $_.FullName })",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | ForEach-Object { $_.FullName })"
     ]
   }
 }

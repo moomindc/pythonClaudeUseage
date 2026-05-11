@@ -21,7 +21,8 @@ _DEFAULTS: dict = {
     "session_key": None,
     "org_id": None,
     "poll_interval_minutes": 5,
-    "window": {"x": None, "y": 10, "width": 153},
+    "rag_mode": False,
+    "window": {"x": None, "y": 10, "width": 123},
     "colors": {
         "fill": "#14532D",       # used-tokens portion of bar
         "background": "#030A05", # unused-tokens portion of bar

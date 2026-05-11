@@ -6,8 +6,8 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QPoint, QTimer, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter
+from PyQt6.QtCore import Qt, QPoint, QRectF, QTimer, pyqtSignal
+from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 
 import config as cfg_mod
@@ -16,6 +16,12 @@ import config as cfg_mod
 # A muted grey colour used for text when no live data is available yet, or when an
 # error message is being displayed instead of the normal countdown.
 _GREY = QColor("#888888")
+
+# RAG mode — hardcoded, not user-configurable
+_AMBER_FILL = "#78350F"
+_AMBER_TEXT = "#FDE68A"
+_RED_FILL   = "#7F1D1D"
+_RED_TEXT   = "#FCA5A5"
 
 
 # BarWindow
@@ -54,8 +60,8 @@ class BarWindow(QWidget):
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool          # keeps bar off the taskbar
         )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
-        w = self._cfg.get("window", {}).get("width", 450)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        w = self._cfg.get("window", {}).get("width", 123)
         self.setFixedSize(w, 27)
 
     # _place_window
@@ -76,6 +82,18 @@ class BarWindow(QWidget):
     # the key is not present in the config.
     def _color(self, key: str, fallback: str) -> QColor:
         return QColor(self._cfg.get("colors", {}).get(key, fallback))
+
+    # _rag_override
+    # When rag_mode is enabled in config, returns hardcoded (fill, text) colour strings
+    # at warning thresholds. Returns None when RAG mode is off or pct is below 80%.
+    def _rag_override(self, pct: float) -> Optional[tuple[str, str]]:
+        if not self._cfg.get("rag_mode", False):
+            return None
+        if pct >= 90:
+            return (_RED_FILL, _RED_TEXT)
+        if pct >= 80:
+            return (_AMBER_FILL, _AMBER_TEXT)
+        return None
 
     # set_data
     # Receives fresh usage data from the main thread signal and stores it for the next
@@ -99,7 +117,17 @@ class BarWindow(QWidget):
     # right (countdown or error) and the percentage on the left.
     def paintEvent(self, _event) -> None:  # noqa: N802
         p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
+
+        clip = QPainterPath()
+        clip.addRoundedRect(0, 0, w, h, 4, 4)
+        p.setClipPath(clip)
+
+        # Resolve active colours — RAG overrides fire at ≥80% and ≥90% when enabled
+        rag = self._rag_override(self._pct)
+        fill_color = QColor(rag[0]) if rag else self._color("fill", "#14532D")
+        text_color = QColor(rag[1]) if rag else self._color("text", "#86EFAC")
 
         # Background (unused tokens)
         p.fillRect(0, 0, w, h, self._color("background", "#030A05"))
@@ -107,7 +135,7 @@ class BarWindow(QWidget):
         # Foreground (used tokens)
         fill_px = int(w * self._pct / 100.0)
         if fill_px > 0:
-            p.fillRect(0, 0, fill_px, h, self._color("fill", "#14532D"))
+            p.fillRect(0, 0, fill_px, h, fill_color)
 
         # Overlay text
         font = QFont("Segoe UI", 8)
@@ -127,8 +155,8 @@ class BarWindow(QWidget):
             else:
                 hh = int(remaining) // 3600
                 mm = (int(remaining) % 3600) // 60
-                text = f"resets in {hh}h {mm:02d}m"
-            p.setPen(self._color("text", "#86EFAC"))
+                text = f"Resets in {hh}h {mm:02d}m"
+            p.setPen(text_color)
 
         tw = fm.horizontalAdvance(text)
         # Baseline so text is vertically centred
@@ -139,8 +167,16 @@ class BarWindow(QWidget):
         if not self._error_text:
             pct_text = f"{self._pct:.0f}%"
             ptw = fm.horizontalAdvance(pct_text)
-            p.setPen(self._color("text", "#86EFAC"))
+            p.setPen(text_color)
             p.drawText(6, baseline, pct_text)
+
+        # 1px border, same colour as text
+        pen = QPen(text_color)
+        pen.setWidthF(1.0)
+        p.setPen(pen)
+        p.setBrush(Qt.BrushStyle.NoBrush)
+        p.setClipping(False)
+        p.drawRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 4, 4)
 
     # --- Drag to reposition ---
 
