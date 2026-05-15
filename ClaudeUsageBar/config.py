@@ -28,6 +28,11 @@ _DEFAULTS: dict = {
         "background": "#030A05", # unused-tokens portion of bar
         "text": "#86EFAC",       # countdown and percentage text
     },
+    "triple_session": {
+        "enabled": False,
+        "work_start": "07:00",   # HH:MM local time — first session trigger of the day
+        "prompt": "Hi",          # message sent to claude.ai to activate each session
+    },
 }
 
 
@@ -42,9 +47,10 @@ def load() -> dict:
         with open(CONFIG_FILE, encoding="utf-8") as f:
             data = json.load(f)
         merged = _deep_copy_defaults()
-        merged.update({k: v for k, v in data.items() if k not in ("window", "colors")})
+        merged.update({k: v for k, v in data.items() if k not in ("window", "colors", "triple_session")})
         merged["window"] = {**_DEFAULTS["window"], **data.get("window", {})}
         merged["colors"] = {**_DEFAULTS["colors"], **data.get("colors", {})}
+        merged["triple_session"] = {**_DEFAULTS["triple_session"], **data.get("triple_session", {})}
         return merged
     except Exception:
         return _deep_copy_defaults()
@@ -74,4 +80,5 @@ def _deep_copy_defaults() -> dict:
     d = dict(_DEFAULTS)
     d["window"] = dict(_DEFAULTS["window"])
     d["colors"] = dict(_DEFAULTS["colors"])
+    d["triple_session"] = dict(_DEFAULTS["triple_session"])
     return d

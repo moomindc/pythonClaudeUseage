@@ -3,6 +3,8 @@
 # functions to fetch the user's organisation list and current usage data, using the
 # browser session cookie for authentication.
 
+import uuid as _uuid
+
 import requests
 from datetime import datetime
 from typing import Optional, Tuple
@@ -71,6 +73,57 @@ def get_usage(session_key: str, org_id: str) -> dict:
         raise AuthError("Session key invalid or expired")
     r.raise_for_status()
     return r.json()
+
+
+def create_conversation(session_key: str, org_id: str) -> str:
+    """Creates a new claude.ai conversation and returns its UUID."""
+    conv_id = str(_uuid.uuid4())
+    r = _session(session_key).post(
+        f"{BASE}/api/organizations/{org_id}/chat_conversations",
+        json={"uuid": conv_id, "name": ""},
+        timeout=30,
+    )
+    if r.status_code in (401, 403):
+        raise AuthError("Session key invalid or expired")
+    r.raise_for_status()
+    return conv_id
+
+
+def delete_conversation(session_key: str, org_id: str, conv_id: str) -> None:
+    """Deletes a conversation so session-trigger chats don't appear in history."""
+    r = _session(session_key).delete(
+        f"{BASE}/api/organizations/{org_id}/chat_conversations/{conv_id}",
+        timeout=30,
+    )
+    r.raise_for_status()
+
+
+def send_session_trigger(session_key: str, org_id: str, prompt: str = "Hi") -> None:
+    """Creates a conversation, sends prompt to activate the 5-hour session, then deletes it."""
+    conv_id = create_conversation(session_key, org_id)
+    try:
+        r = _session(session_key).post(
+            f"{BASE}/api/organizations/{org_id}/chat_conversations/{conv_id}/completion",
+            json={
+                "prompt": prompt,
+                "timezone": "Europe/London",
+                "attachments": [],
+                "files": [],
+            },
+            headers={"accept": "text/event-stream"},
+            stream=True,
+            timeout=30,
+        )
+        if r.status_code in (401, 403):
+            raise AuthError("Session key invalid or expired")
+        r.raise_for_status()
+        r.raw.read(2048)
+        r.close()
+    finally:
+        try:
+            delete_conversation(session_key, org_id, conv_id)
+        except Exception:
+            pass
 
 
 # parse_usage

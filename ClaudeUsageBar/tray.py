@@ -31,6 +31,7 @@ class _Signals(QObject):
     toggle = pyqtSignal(bool)        # True = show, False = hide
     reconfigure = pyqtSignal()
     exit = pyqtSignal()
+    toggle_triple = pyqtSignal()
 
 
 # TrayIcon
@@ -45,6 +46,8 @@ class TrayIcon:
         self.signals = _Signals()
         self._icon: pystray.Icon | None = None
         self._visible = True
+        self._triple_enabled = False
+        self._triple_times_str = ""
 
     # visible (property)
     # Read-only property that reports whether the bar window is currently set to be
@@ -68,11 +71,25 @@ class TrayIcon:
         def _exit(icon, item):
             self.signals.exit.emit()
 
+        def _toggle_triple(icon, item):
+            self.signals.toggle_triple.emit()
+
         menu = pystray.Menu(
             pystray.MenuItem(
                 lambda _: "Hide bar" if self._visible else "Show bar",
                 _toggle,
                 default=True,
+            ),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                lambda _: f"Triple Session: {'ON ✓' if self._triple_enabled else 'OFF'}",
+                _toggle_triple,
+            ),
+            pystray.MenuItem(
+                lambda _: f"  {self._triple_times_str}",
+                None,
+                enabled=False,
+                visible=lambda _: self._triple_enabled,
             ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Reconfigure…", _reconfig),
@@ -91,6 +108,15 @@ class TrayIcon:
     def set_tooltip(self, text: str) -> None:
         if self._icon:
             self._icon.title = text
+
+    # set_triple_session
+    # Updates the tray menu to reflect the current triple session state. Call this
+    # after toggling the feature on/off or after reloading config.
+    def set_triple_session(self, enabled: bool, times_str: str) -> None:
+        self._triple_enabled = enabled
+        self._triple_times_str = times_str
+        if self._icon:
+            self._icon.update_menu()
 
     # stop
     # Cleanly shuts down the pystray icon and removes it from the system tray.

@@ -6,6 +6,7 @@
 import logging
 import sys
 import threading
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 from PyQt6.QtCore import QObject, QTimer, pyqtSignal
@@ -63,6 +64,8 @@ class App:
         self._bar: Optional[BarWindow] = None
         self._tray: Optional[TrayIcon] = None
         self._timer: Optional[QTimer] = None
+        self._sched_timer: Optional[QTimer] = None
+        self._triggered_today: dict[int, date] = {}
         self._alive = True
 
     # run
@@ -79,6 +82,8 @@ class App:
         self._start_tray()
         self._bridge.data_ready.connect(self._on_data)
         self._start_polling()
+        self._start_session_scheduler()
+        self._update_tray_triple()
 
         log.info("Claude Usage Bar started")
         sys.exit(self._qt.exec())
@@ -108,6 +113,7 @@ class App:
         self._tray.signals.toggle.connect(self._on_toggle)
         self._tray.signals.reconfigure.connect(self._on_reconfigure)
         self._tray.signals.exit.connect(self._on_exit)
+        self._tray.signals.toggle_triple.connect(self._on_toggle_triple)
         self._tray.start()
 
     # _start_polling
@@ -122,6 +128,86 @@ class App:
         self._timer.timeout.connect(self._spawn_fetch)
         self._timer.start(interval_ms)
         self._spawn_fetch()   # immediate first fetch
+
+    # _start_session_scheduler
+    # Creates (or resets) the 60-second QTimer that checks whether a triple-session
+    # trigger is due. Fires an immediate check on start so the app catches a trigger
+    # that falls within 2 minutes of startup.
+    def _start_session_scheduler(self) -> None:
+        if self._sched_timer:
+            self._sched_timer.stop()
+        self._sched_timer = QTimer()
+        self._sched_timer.timeout.connect(self._check_session_schedule)
+        self._sched_timer.start(60_000)
+        self._check_session_schedule()
+
+    # _session_times
+    # Returns the four daily trigger datetimes derived from the configured work_start
+    # time (spaced 5 hours apart). Returns an empty list when triple session is off.
+    def _session_times(self) -> list:
+        ts_cfg = self._cfg.get("triple_session", {})
+        if not ts_cfg.get("enabled", False):
+            return []
+        h, m = map(int, ts_cfg.get("work_start", "07:00").split(":"))
+        today = datetime.now().date()
+        base = datetime(today.year, today.month, today.day, h, m)
+        return [base + timedelta(hours=5 * i) for i in range(4)]
+
+    # _check_session_schedule
+    # Called every 60 seconds. For each scheduled session time that has not yet been
+    # triggered today, fires a background trigger if now is within the 2-minute window.
+    def _check_session_schedule(self) -> None:
+        now = datetime.now()
+        today = now.date()
+        for i, t in enumerate(self._session_times()):
+            if self._triggered_today.get(i) == today:
+                continue
+            diff = (now - t).total_seconds()
+            if 0 <= diff < 120:
+                self._triggered_today[i] = today
+                log.info("Triggering triple session %d", i + 1)
+                threading.Thread(target=self._do_trigger, daemon=True).start()
+
+    # _do_trigger
+    # Background thread: sends the configured prompt to claude.ai to activate the
+    # next 5-hour session window. The conversation is deleted automatically after sending
+    # so it never appears in chat history.
+    def _do_trigger(self) -> None:
+        key = self._cfg.get("session_key", "")
+        org = self._cfg.get("org_id", "")
+        prompt = self._cfg.get("triple_session", {}).get("prompt", "Hi")
+        try:
+            claude_client.send_session_trigger(key, org, prompt)
+            log.info("Triple session trigger sent successfully")
+        except Exception as exc:
+            log.warning("Triple session trigger failed: %s", exc)
+
+    # _triple_times_str
+    # Formats the day's session trigger times as a readable string for the tray menu,
+    # e.g. "7:00 AM · 12:00 PM · 5:00 PM · 10:00 PM".
+    def _triple_times_str(self) -> str:
+        times = self._session_times()
+        if not times:
+            ts_cfg = self._cfg.get("triple_session", {})
+            h, m = map(int, ts_cfg.get("work_start", "07:00").split(":"))
+            today = datetime.now().date()
+            base = datetime(today.year, today.month, today.day, h, m)
+            times = [base + timedelta(hours=5 * i) for i in range(4)]
+
+        def _fmt(t: datetime) -> str:
+            hour = t.hour % 12 or 12
+            ampm = "AM" if t.hour < 12 else "PM"
+            return f"{hour}:{t.minute:02d} {ampm}"
+
+        return " · ".join(_fmt(t) for t in times)
+
+    # _update_tray_triple
+    # Pushes the current triple-session state and session-times string to the tray so
+    # the menu label and info item stay in sync after config changes.
+    def _update_tray_triple(self) -> None:
+        if self._tray:
+            enabled = self._cfg.get("triple_session", {}).get("enabled", False)
+            self._tray.set_triple_session(enabled, self._triple_times_str())
 
     # _spawn_fetch
     # Launches _fetch in a new daemon thread so the network call never freezes the
@@ -183,6 +269,19 @@ class App:
             if self._bar:
                 self._bar._cfg = self._cfg
             self._start_polling()
+            self._start_session_scheduler()
+            self._update_tray_triple()
+
+    # _on_toggle_triple
+    # Flips the triple_session.enabled flag in config, saves it, and restarts the
+    # scheduler so the change takes effect immediately.
+    def _on_toggle_triple(self) -> None:
+        ts = self._cfg.setdefault("triple_session", {})
+        ts["enabled"] = not ts.get("enabled", False)
+        cfg_mod.save(self._cfg)
+        self._start_session_scheduler()
+        self._update_tray_triple()
+        log.info("Triple session %s", "enabled" if ts["enabled"] else "disabled")
 
     # _on_exit
     # Handles the Exit action from the tray or context menu. Sets the alive flag to
