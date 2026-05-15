@@ -7,7 +7,7 @@ import ctypes
 from datetime import datetime, timezone
 from typing import Optional
 
-from PyQt6.QtCore import Qt, QPoint, QRectF, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QPoint, QRect, QRectF, QTimer, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 
@@ -41,6 +41,7 @@ _RED_TEXT   = "#FCA5A5"
 # the user chooses "Reconfigure" from the right-click menu.
 class BarWindow(QWidget):
     reconfigure_requested = pyqtSignal()
+    settings_requested = pyqtSignal()
 
     # __init__
     # Sets up the internal state variables, applies the window style, positions the
@@ -87,6 +88,21 @@ class BarWindow(QWidget):
         if x is None:
             screen = QApplication.primaryScreen().geometry()
             x = screen.width() - self.width() - 10
+
+        # If the bar would be entirely off every screen (e.g. after a display change),
+        # snap it to the right edge of the primary screen and save the corrected position.
+        on_screen = any(
+            s.geometry().intersects(QRect(x, y, self.width(), self.height()))
+            for s in QApplication.screens()
+        )
+        if not on_screen:
+            screen = QApplication.primaryScreen().geometry()
+            x = screen.width() - self.width() - 10
+            y = max(0, min(y, screen.height() - self.height()))
+            self._cfg.setdefault("window", {})["x"] = x
+            self._cfg["window"]["y"] = y
+            cfg_mod.save(self._cfg)
+
         self.move(x, y)
 
     # _color
@@ -233,6 +249,7 @@ class BarWindow(QWidget):
     # to open the setup wizard again or to quit the application entirely.
     def contextMenuEvent(self, e) -> None:  # noqa: N802
         menu = QMenu(self)
+        menu.addAction("Settings…", self.settings_requested.emit)
         menu.addAction("Reconfigure…", self.reconfigure_requested.emit)
         menu.addSeparator()
         menu.addAction("Exit", QApplication.quit)

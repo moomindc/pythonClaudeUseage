@@ -13,7 +13,9 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | Where-Object { $_.Name -in @\\('setup.py', 'pyproject.toml', 'setup.cfg'\\) } | ForEach-Object { $_.FullName })",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | ForEach-Object { $_.FullName })",
       "Bash(Get-ChildItem -Recurse -File -Filter \"*.py\")",
-      "Bash(Select-Object -ExpandProperty FullName)"
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(py -c \"import bar_window; import tray; import settings_dialog; print\\('imports OK'\\)\")",
+      "Bash(py -c ' *)"
     ]
   }
 }

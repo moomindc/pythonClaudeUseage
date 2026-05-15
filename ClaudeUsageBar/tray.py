@@ -32,6 +32,7 @@ class _Signals(QObject):
     reconfigure = pyqtSignal()
     exit = pyqtSignal()
     toggle_triple = pyqtSignal()
+    settings = pyqtSignal()
 
 
 # TrayIcon
@@ -74,6 +75,9 @@ class TrayIcon:
         def _toggle_triple(icon, item):
             self.signals.toggle_triple.emit()
 
+        def _settings(icon, item):
+            self.signals.settings.emit()
+
         menu = pystray.Menu(
             pystray.MenuItem(
                 lambda _: "Hide bar" if self._visible else "Show bar",
@@ -92,6 +96,7 @@ class TrayIcon:
                 visible=lambda _: self._triple_enabled,
             ),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Settings…", _settings),
             pystray.MenuItem("Reconfigure…", _reconfig),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Exit", _exit),

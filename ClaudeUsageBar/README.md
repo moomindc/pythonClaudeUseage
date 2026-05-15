@@ -68,9 +68,9 @@ The floating bar appears immediately after the wizard closes.
 | Action | What happens |
 |--------|-------------|
 | **Drag the bar** | Click and drag to move it anywhere on screen — position is saved |
-| **Right-click the bar** | Context menu: Reconfigure or Exit |
+| **Right-click the bar** | Context menu: Settings, Reconfigure, or Exit |
 | **Left-click tray icon** | Toggle bar visibility (show / hide) |
-| **Right-click tray icon** | Show/hide, Triple Session toggle, Reconfigure, or Exit |
+| **Right-click tray icon** | Show/hide, Triple Session toggle, Settings, Reconfigure, or Exit |
 
 The bar updates every 5 minutes (configurable). The countdown text ticks every second
 from the cached reset timestamp — no extra network call needed.
@@ -126,7 +126,15 @@ way when you don't need it (e.g. weekends).
 
 ### Configuration
 
-You can customise the schedule and trigger message in `config.json`:
+Open **Settings** from either right-click menu to configure triple session without touching any files:
+
+- **Enabled** checkbox — same as the tray toggle
+- **First session starts at** — 24-hour time picker
+- **Trigger prompt** — the message sent to activate each session
+
+Changes take effect immediately when you click **Save**.
+
+You can also edit `config.json` directly:
 
 ```json
 "triple_session": {
@@ -138,12 +146,9 @@ You can customise the schedule and trigger message in `config.json`:
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `enabled` | `false` | Turn the scheduler on or off (also togglable from tray) |
+| `enabled` | `false` | Turn the scheduler on or off (also togglable from tray or Settings) |
 | `work_start` | `"07:00"` | Local time of session 1 — subsequent sessions are +5 h, +10 h, +15 h |
 | `prompt` | `"Hi"` | Message sent to activate each session; any short text works |
-
-Changes to `work_start` or `prompt` take effect on the next app start or after using
-**Reconfigure** from the tray.
 
 > **Note:** Triple Session uses the same internal claude.ai API as the usage bar, so no
 > extra API key is needed. It does consume one message from each 5-hour session window.
@@ -152,13 +157,29 @@ Changes to `work_start` or `prompt` take effect on the next app start or after u
 
 ## Configuration
 
-The config file lives at:
+Most settings are accessible directly from the app via **Settings** (right-click the bar or
+the tray icon):
+
+| Setting | Range | Description |
+|---------|-------|-------------|
+| Poll interval | 1–60 min | How often to fetch usage from claude.ai |
+| Bar width | 50–400 px | Width of the floating bar |
+| Fill colour | colour picker | Colour of the used-tokens portion |
+| Background colour | colour picker | Colour of the unused-tokens portion |
+| Text colour | colour picker | Colour of the countdown and percentage text |
+| Triple Session enabled | checkbox | Enable/disable the session scheduler |
+| First session starts at | time picker | Work-start time for the session schedule |
+| Trigger prompt | text field | Message sent to activate each session |
+
+Changes take effect immediately when you click **Save** — no restart required.
+
+The underlying config file is at:
 
 ```
 %APPDATA%\ClaudeUsageBar\config.json
 ```
 
-You can edit it in any text editor. Changes take effect on next launch.
+You can also edit it directly in any text editor (changes take effect on next launch):
 
 ```json
 {
@@ -169,6 +190,11 @@ You can edit it in any text editor. Changes take effect on next launch.
     "x": 1200,
     "y": 10,
     "width": 450
+  },
+  "colors": {
+    "fill": "#14532D",
+    "background": "#030A05",
+    "text": "#86EFAC"
   }
 }
 ```
@@ -176,8 +202,11 @@ You can edit it in any text editor. Changes take effect on next launch.
 | Field | Default | Description |
 |-------|---------|-------------|
 | `poll_interval_minutes` | `5` | How often to fetch usage from claude.ai |
-| `window.width` | `450` | Bar width in pixels |
+| `window.width` | `123` | Bar width in pixels |
 | `window.x` / `window.y` | top-right corner | Bar position (updated automatically on drag) |
+| `colors.fill` | `#14532D` | Used-tokens bar colour |
+| `colors.background` | `#030A05` | Unused-tokens bar colour |
+| `colors.text` | `#86EFAC` | Countdown and percentage text colour |
 
 ---
 
@@ -230,7 +259,7 @@ Useful for diagnosing network errors or unexpected API responses.
 - Check `%APPDATA%\ClaudeUsageBar\app.log` for `Triple session trigger failed` and the error message
 - The most likely cause is a change to the claude.ai internal API — look for the HTTP status code in the log
 - Confirm Triple Session is enabled: right-click tray → the item should read `Triple Session: ON ✓`
-- Make sure `work_start` in config.json is in `HH:MM` 24-hour format (e.g. `"07:00"`, not `"7:00 AM"`)
+- Make sure `work_start` in config.json is in `HH:MM` 24-hour format (e.g. `"07:00"`, not `"7:00 AM"`) — the Settings dialog enforces this automatically
 
 ---
 
@@ -238,11 +267,12 @@ Useful for diagnosing network errors or unexpected API responses.
 
 ```
 ClaudeUsageBar/
-├── main.py           Entry point — wires all components together
-├── bar_window.py     Frameless PyQt6 window with custom paint
-├── wizard.py         3-page setup wizard dialog
-├── tray.py           System tray icon (pystray + Pillow)
-├── claude_client.py  HTTP client for claude.ai internal API
-├── config.py         Config file read/write
-└── requirements.txt  Python dependencies
+├── main.py              Entry point — wires all components together
+├── bar_window.py        Frameless PyQt6 window with custom paint
+├── wizard.py            3-page setup wizard dialog
+├── settings_dialog.py   Settings dialog (poll interval, width, colours, triple session)
+├── tray.py              System tray icon (pystray + Pillow)
+├── claude_client.py     HTTP client for claude.ai internal API
+├── config.py            Config file read/write
+└── requirements.txt     Python dependencies
 ```

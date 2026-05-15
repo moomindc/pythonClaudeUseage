@@ -103,6 +103,7 @@ class App:
     def _start_bar(self) -> None:
         self._bar = BarWindow(self._cfg)
         self._bar.reconfigure_requested.connect(self._on_reconfigure)
+        self._bar.settings_requested.connect(self._on_settings)
         self._bar.show()
 
     # _start_tray
@@ -114,6 +115,7 @@ class App:
         self._tray.signals.reconfigure.connect(self._on_reconfigure)
         self._tray.signals.exit.connect(self._on_exit)
         self._tray.signals.toggle_triple.connect(self._on_toggle_triple)
+        self._tray.signals.settings.connect(self._on_settings)
         self._tray.start()
 
     # _start_polling
@@ -268,6 +270,23 @@ class App:
             self._cfg = cfg_mod.load()
             if self._bar:
                 self._bar._cfg = self._cfg
+            self._start_polling()
+            self._start_session_scheduler()
+            self._update_tray_triple()
+
+    # _on_settings
+    # Opens the settings dialog. On save, reloads config from disk, resizes and
+    # repositions the bar, and restarts the polling and session-schedule timers.
+    def _on_settings(self) -> None:
+        from settings_dialog import SettingsDialog
+        dlg = SettingsDialog(self._cfg)
+        if dlg.exec() == _ACCEPTED:
+            self._cfg = cfg_mod.load()
+            if self._bar:
+                self._bar._cfg = self._cfg
+                w = self._cfg.get("window", {}).get("width", 123)
+                self._bar.setFixedSize(w, 27)
+                self._bar.update()
             self._start_polling()
             self._start_session_scheduler()
             self._update_tray_triple()
