@@ -11,7 +11,9 @@
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\\\\ClaudeUsageBar\" -Recurse | Where-Object { $_.Extension -in @\\('.ico', '.png', '.jpg', '.jpeg', '.gif', '.bmp'\\) } | ForEach-Object { $_.FullName })",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Filter \"setup.py\", \"pyproject.toml\", \"setup.cfg\" | ForEach-Object { $_.FullName })",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | Where-Object { $_.Name -in @\\('setup.py', 'pyproject.toml', 'setup.cfg'\\) } | ForEach-Object { $_.FullName })",
-      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | ForEach-Object { $_.FullName })"
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Dan\\\\OneDrive - OpenText\\\\Dropbox\\\\Documents\\\\Code\\\\Python\\\\ClaudeUseage\" -Recurse | ForEach-Object { $_.FullName })",
+      "Bash(Get-ChildItem -Recurse -File -Filter \"*.py\")",
+      "Bash(Select-Object -ExpandProperty FullName)"
     ]
   }
 }
