@@ -3,6 +3,7 @@
 # is drawn entirely by hand in paintEvent — there are no child widgets. A one-second
 # timer ticks the countdown display without making any network calls.
 
+import ctypes
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -11,6 +12,16 @@ from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPe
 from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 
 import config as cfg_mod
+
+
+def _is_rdp() -> bool:
+    # SM_REMOTESESSION (0x1000) is non-zero when the process runs inside an RDP session.
+    # Layered windows (WS_EX_LAYERED / WA_TranslucentBackground) are not rendered by RDP,
+    # so we skip transparency in that case.
+    try:
+        return bool(ctypes.windll.user32.GetSystemMetrics(0x1000))
+    except Exception:
+        return False
 
 # _GREY
 # A muted grey colour used for text when no live data is available yet, or when an
@@ -42,6 +53,7 @@ class BarWindow(QWidget):
         self._reset_at: Optional[datetime] = None
         self._error_text: Optional[str] = None
         self._drag_origin: Optional[QPoint] = None
+        self._rdp = _is_rdp()
 
         self._setup_window()
         self._place_window()
@@ -60,7 +72,8 @@ class BarWindow(QWidget):
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool          # keeps bar off the taskbar
         )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        if not self._rdp:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         w = self._cfg.get("window", {}).get("width", 123)
         self.setFixedSize(w, 27)
 
@@ -120,9 +133,10 @@ class BarWindow(QWidget):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         w, h = self.width(), self.height()
 
-        clip = QPainterPath()
-        clip.addRoundedRect(0, 0, w, h, 4, 4)
-        p.setClipPath(clip)
+        if not self._rdp:
+            clip = QPainterPath()
+            clip.addRoundedRect(0, 0, w, h, 4, 4)
+            p.setClipPath(clip)
 
         # Resolve active colours — RAG overrides fire at ≥80% and ≥90% when enabled
         rag = self._rag_override(self._pct)
@@ -176,7 +190,10 @@ class BarWindow(QWidget):
         p.setPen(pen)
         p.setBrush(Qt.BrushStyle.NoBrush)
         p.setClipping(False)
-        p.drawRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 4, 4)
+        if self._rdp:
+            p.drawRect(QRectF(0.5, 0.5, w - 1, h - 1))
+        else:
+            p.drawRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 4, 4)
 
     # --- Drag to reposition ---
 
