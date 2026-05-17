@@ -40,6 +40,7 @@ class SettingsDialog(QDialog):
             "Bar width (pixels)", "window_width",
             50, 400, self._cfg.get("window", {}).get("width", 123),
         ))
+        root.addLayout(self._row_reset_display())
 
         root.addWidget(self._separator())
         root.addWidget(self._section_header("Colours"))
@@ -95,6 +96,15 @@ class SettingsDialog(QDialog):
         btn.clicked.connect(lambda _checked, b=btn, k=key: self._pick_color(b, k))
         setattr(self, f"_color_btn_{key}", btn)
         row.addWidget(btn)
+        return row
+
+    def _row_reset_display(self) -> QHBoxLayout:
+        row = QHBoxLayout()
+        row.addWidget(QLabel("Reset countdown style"))
+        row.addStretch()
+        self._reset_clock = QCheckBox("Clock time (HH:MM)")
+        self._reset_clock.setChecked(self._cfg.get("reset_display", "countdown") == "clock")
+        row.addWidget(self._reset_clock)
         return row
 
     def _row_triple(self) -> QVBoxLayout:
@@ -169,6 +179,7 @@ class SettingsDialog(QDialog):
         self._cfg["poll_interval_minutes"] = self._poll_interval_minutes.value()
         self._cfg.setdefault("window", {})["width"] = self._window_width.value()
         self._cfg["colors"] = dict(self._colors)
+        self._cfg["reset_display"] = "clock" if self._reset_clock.isChecked() else "countdown"
         ts = self._cfg.setdefault("triple_session", {})
         ts["enabled"] = self._triple_enabled.isChecked()
         t = self._triple_time.time()

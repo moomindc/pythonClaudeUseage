@@ -182,6 +182,9 @@ class BarWindow(QWidget):
             remaining = (self._reset_at - datetime.now(timezone.utc)).total_seconds()
             if remaining <= 0:
                 text = "resetting…"
+            elif self._cfg.get("reset_display", "countdown") == "clock":
+                local_reset = self._reset_at.astimezone(tz=None)
+                text = f"Resets at {local_reset.strftime('%H:%M')}"
             else:
                 hh = int(remaining) // 3600
                 mm = (int(remaining) % 3600) // 60

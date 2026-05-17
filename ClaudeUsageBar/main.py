@@ -67,6 +67,7 @@ class App:
         self._sched_timer: Optional[QTimer] = None
         self._triggered_today: dict[int, date] = {}
         self._alive = True
+        self._current_interval_ms: int = 0
 
     # run
     # The main startup sequence. Shows the setup wizard if credentials are missing,
@@ -123,13 +124,43 @@ class App:
     # QTimer that triggers fetch jobs, and fires an immediate first fetch so data
     # appears right away rather than waiting for the first interval to elapse.
     def _start_polling(self) -> None:
-        interval_ms = int(self._cfg.get("poll_interval_minutes", 5) * 60_000)
+        interval_ms = self._base_interval_ms()
         if self._timer:
             self._timer.stop()
         self._timer = QTimer()
         self._timer.timeout.connect(self._spawn_fetch)
         self._timer.start(interval_ms)
+        self._current_interval_ms = interval_ms
         self._spawn_fetch()   # immediate first fetch
+
+    # _base_interval_ms
+    # Returns the configured polling interval in milliseconds.
+    def _base_interval_ms(self) -> int:
+        return int(self._cfg.get("poll_interval_minutes", 5) * 60_000)
+
+    # _desired_interval_ms
+    # Returns the adaptive polling interval for a given usage percentage:
+    # 90%+  → every 90 seconds; 80–90% → half the base interval; below 80% → base interval.
+    def _desired_interval_ms(self, pct: float) -> int:
+        base = self._base_interval_ms()
+        if pct >= 90.0:
+            return 90_000
+        if pct >= 80.0:
+            return max(base // 2, 90_000)
+        return base
+
+    # _maybe_adjust_poll
+    # Called after each data update. If the desired polling interval differs from the
+    # current one, restarts the timer with the new interval.
+    def _maybe_adjust_poll(self, pct: float) -> None:
+        if pct < 0:
+            return
+        desired = self._desired_interval_ms(pct)
+        if desired != self._current_interval_ms and self._timer:
+            self._timer.stop()
+            self._timer.start(desired)
+            self._current_interval_ms = desired
+            log.info("Poll interval adjusted to %ds (pct=%.1f%%)", desired // 1000, pct)
 
     # _start_session_scheduler
     # Creates (or resets) the 60-second QTimer that checks whether a triple-session
@@ -252,6 +283,7 @@ class App:
     def _on_data(self, pct: float, reset_at, error_text) -> None:
         if self._bar:
             self._bar.set_data(pct, reset_at, error_text)
+        self._maybe_adjust_poll(pct)
 
     # _on_toggle
     # Shows or hides the floating bar window in response to the "Show bar" / "Hide bar"

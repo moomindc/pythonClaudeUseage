@@ -22,6 +22,7 @@ _DEFAULTS: dict = {
     "org_id": None,
     "poll_interval_minutes": 5,
     "rag_mode": False,
+    "reset_display": "countdown",
     "window": {"x": None, "y": 10, "width": 123},
     "colors": {
         "fill": "#14532D",       # used-tokens portion of bar

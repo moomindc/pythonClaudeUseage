@@ -16,10 +16,12 @@
 
 ### Dan
 **get the frequency of bar updates to increse as we enter Amber and red**
+**as soon as a session reaches 100% it should trigger a new session - make it an option**
+**option resets in xh xm or a time**
 
 ### 1. Windows Toast Notifications
 **What:** Pop a native Windows notification when usage crosses a threshold (e.g., 80%, 90%, reset).
-**Why:** The bar is often buried behind windows — a toast ensures you don't miss a critical state.
+**Why:** The bar could be hidden — a toast ensures you don't miss a critical state.
 **How:** `windows-toasts` or `win10toast-reborn` library; fire once per threshold crossing (track `_last_notified_threshold` in `main.py` to avoid repeat toasts).
 **Config:** `"notifications": {"enabled": true, "thresholds": [80, 90]}` in `config.json`.
 
@@ -56,20 +58,6 @@
 
 ---
 
-### 6. Smooth Fill Animation
-**What:** Bar fill slides to the new value over ~400ms instead of jumping instantly.
-**Why:** Visual polish — makes updates feel alive rather than jarring.
-**How:** On `set_data()`, store `_pct_target` and start a `QTimer` at ~30fps that steps `_pct` toward `_pct_target` by a fixed delta per tick. Stop the timer on arrival.
-
----
-
-### 7. Hover Tooltip on the Bar Itself
-**What:** Mouse hover shows a detailed tooltip: `"82% used · resets at 14:32 (1h 58m)"`.
-**Why:** The bar's 27px height and 8pt font leave no room for more info; tooltip is free real-estate.
-**How:** Override `enterEvent` / `leaveEvent` in `bar_window.py`, use `QToolTip.showText()` with a formatted string.
-
----
-
 ## Tier 2 — Medium complexity, high reward
 
 ### 8. Multi-Monitor Awareness
@@ -78,24 +66,10 @@
 
 ---
 
-### 9. In-App Config Editor
-**What:** A simple dialog for editing common settings: poll interval, colors, RAG thresholds, notifications on/off.
-**Why:** Currently all config changes require manual JSON editing — a barrier for non-technical users.
-**How:** New `config_dialog.py` with a `QDialog`, form fields bound to config keys. Save on OK. Accessible from right-click menu.
-
----
-
 ### 10. Session Key Expiry Detection
 **What:** After N consecutive auth errors, show a specific tray notification: "Session key expired — click to reconfigure."
 **Why:** Current "Auth error · right-click to fix" is vague. Most auth errors in practice are expiry.
 **How:** Track `_consecutive_auth_errors` in `main.py`; after threshold (e.g., 3), fire a toast and optionally open the wizard automatically.
-
----
-
-### 11. Resizable Width via Drag
-**What:** Drag the left or right edge of the bar to resize it, persisted to config.
-**Why:** Width currently requires editing `config.json`. Content (text) can feel cramped or too sparse at different widths.
-**How:** Detect cursor proximity to edges in `mousePressEvent`; enter resize vs drag mode. Call `setFixedSize()` on release.
 
 ---
 
@@ -144,6 +118,8 @@
 **How:** Toggle `WS_EX_TRANSPARENT` extended window style via `win32api`. Disable drag-to-reposition while active. Toggle from tray menu ("Click-through ✓").
 **Config:** `"click_through": false`.
 
+CAN we also make it a tad transparent so this is usegul ? see below
+
 ---
 
 ### 18. Opacity Control
@@ -161,22 +137,6 @@
 
 ---
 
-### 20. Paste-from-Clipboard in Wizard
-**What:** Add a "Paste" button beside the session key input field in the wizard.
-**Why:** The `sk-ant-sid01-…` key is long and awkward to type; users copy it from DevTools but have to manually click the field and paste. A button removes friction.
-**How:** `QApplication.clipboard().text()` → `self._key_input.setText(...)` in `wizard.py`. Single button, single line.
-
----
-
-## Tier 2 additions
-
-### 21. Global Hotkey — Show/Hide Bar
-**What:** A system-wide keyboard shortcut (e.g., `Ctrl+Shift+U`) to toggle bar visibility without touching the tray icon.
-**Why:** When the bar is hidden and you want a quick usage check, finding the tray icon is slower than a key combo.
-**How:** `keyboard` library (`pip install keyboard`) registers a global hook in a background thread; emits via `_Bridge` to call `bar.setVisible()` on the Qt thread.
-**Config:** `"hotkey": "ctrl+shift+u"`.
-
----
 
 ### 22. Usage Rate + "Safe to Go" Estimate
 **What:** Track percentage over time and display an estimated remaining productive time — e.g., "~45 min left at this rate" — in the hover tooltip.
