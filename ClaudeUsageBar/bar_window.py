@@ -14,6 +14,11 @@ from PyQt6.QtWidgets import QApplication, QMenu, QWidget
 import config as cfg_mod
 
 
+_GWL_EXSTYLE = -20
+_WS_EX_LAYERED = 0x00080000
+_WS_EX_TRANSPARENT = 0x00000020
+
+
 def _is_rdp() -> bool:
     # SM_REMOTESESSION (0x1000) is non-zero when the process runs inside an RDP session.
     # Layered windows (WS_EX_LAYERED / WA_TranslucentBackground) are not rendered by RDP,
@@ -216,6 +221,28 @@ class BarWindow(QWidget):
             p.drawRect(QRectF(0.5, 0.5, w - 1, h - 1))
         else:
             p.drawRoundedRect(QRectF(0.5, 0.5, w - 1, h - 1), 4, 4)
+
+    # --- Opacity and click-through ---
+
+    # apply_config
+    # Re-reads opacity and click_through from the current config and applies them.
+    # Must be called after show() so the native HWND exists.
+    def apply_config(self) -> None:
+        opacity = float(self._cfg.get("opacity", 1.0))
+        self.setWindowOpacity(max(0.3, min(1.0, opacity)))
+        self._set_click_through(bool(self._cfg.get("click_through", False)))
+
+    # _set_click_through
+    # Adds or removes WS_EX_TRANSPARENT from the window's extended style so that mouse
+    # events pass straight through to whatever sits underneath the bar.
+    def _set_click_through(self, enabled: bool) -> None:
+        hwnd = int(self.winId())
+        exstyle = ctypes.windll.user32.GetWindowLongW(hwnd, _GWL_EXSTYLE)
+        if enabled:
+            exstyle |= _WS_EX_LAYERED | _WS_EX_TRANSPARENT
+        else:
+            exstyle &= ~_WS_EX_TRANSPARENT
+        ctypes.windll.user32.SetWindowLongW(hwnd, _GWL_EXSTYLE, exstyle)
 
     # --- Drag to reposition ---
 

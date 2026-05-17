@@ -1,5 +1,5 @@
 import config as cfg_mod
-from PyQt6.QtCore import QTime
+from PyQt6.QtCore import Qt, QTime
 from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QCheckBox,
@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPushButton,
+    QSlider,
     QSpinBox,
     QTimeEdit,
     QVBoxLayout,
@@ -76,6 +77,10 @@ class SettingsDialog(QDialog):
         right.addWidget(self._separator())
         right.addWidget(self._section_header("Notifications"))
         right.addLayout(self._row_notifications())
+
+        right.addWidget(self._separator())
+        right.addWidget(self._section_header("Appearance"))
+        right.addLayout(self._row_appearance())
 
         right.addStretch()
 
@@ -208,6 +213,41 @@ class SettingsDialog(QDialog):
 
         return col
 
+    def _row_appearance(self) -> QVBoxLayout:
+        col = QVBoxLayout()
+        col.setSpacing(8)
+
+        opacity_row = QHBoxLayout()
+        opacity_row.addWidget(QLabel("Opacity"))
+        opacity_row.addStretch()
+        self._opacity_slider = QSlider(Qt.Orientation.Horizontal)
+        self._opacity_slider.setRange(30, 100)
+        self._opacity_slider.setValue(int(self._cfg.get("opacity", 1.0) * 100))
+        self._opacity_slider.setFixedWidth(75)
+        self._opacity_label = QLabel(f"{self._opacity_slider.value()}%")
+        self._opacity_label.setFixedWidth(35)
+        self._opacity_slider.valueChanged.connect(
+            lambda v: self._opacity_label.setText(f"{v}%")
+        )
+        opacity_row.addWidget(self._opacity_slider)
+        opacity_row.addWidget(self._opacity_label)
+        col.addLayout(opacity_row)
+
+        self._click_through = QCheckBox("Click-through mode")
+        self._click_through.setChecked(self._cfg.get("click_through", False))
+        col.addWidget(self._click_through)
+
+        warn = QLabel("Tip: when click-through is on,\nuse the system tray to open settings.")
+        warn_font = QFont()
+        warn_font.setItalic(True)
+        warn.setFont(warn_font)
+        warn.setStyleSheet("color: #F59E0B;")
+        warn.setVisible(self._cfg.get("click_through", False))
+        self._click_through.toggled.connect(warn.setVisible)
+        col.addWidget(warn)
+
+        return col
+
     def _row_notifications(self) -> QVBoxLayout:
         notif = self._cfg.get("notifications", {})
         thresholds = notif.get("thresholds", [80, 90])
@@ -290,5 +330,7 @@ class SettingsDialog(QDialog):
             thresholds.append(self._rag_red.value())
         self._cfg.setdefault("notifications", {})["enabled"] = self._notif_enabled.isChecked()
         self._cfg["notifications"]["thresholds"] = thresholds
+        self._cfg["opacity"] = self._opacity_slider.value() / 100.0
+        self._cfg["click_through"] = self._click_through.isChecked()
         cfg_mod.save(self._cfg)
         self.accept()

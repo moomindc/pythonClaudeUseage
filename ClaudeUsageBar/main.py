@@ -133,6 +133,7 @@ class App:
         self._bar.reconfigure_requested.connect(self._on_reconfigure)
         self._bar.settings_requested.connect(self._on_settings)
         self._bar.show()
+        self._bar.apply_config()
 
     # _start_tray
     # Creates the system tray icon, connects each tray menu action (toggle, reconfigure,
@@ -349,6 +350,7 @@ class App:
                 self._bar._cfg = self._cfg
                 w = self._cfg.get("window", {}).get("width", 123)
                 self._bar.setFixedSize(w, 27)
+                self._bar.apply_config()
                 self._bar.update()
             if self._notifier:
                 self._notifier._cfg = self._cfg

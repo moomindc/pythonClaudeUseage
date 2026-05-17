@@ -39,6 +39,8 @@ _DEFAULTS: dict = {
         "thresholds": [80, 90],  # fire a toast when usage first crosses these percentages
     },
     "rag_thresholds": {"amber": 80, "red": 90},
+    "opacity": 1.0,
+    "click_through": False,
 }
 
 
