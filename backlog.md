@@ -9,15 +9,15 @@
 - System tray (toggle visibility, Reconfigure, Exit)
 - Setup wizard (sessionKey entry + org auto-discovery)
 - Auth error and offline error states
+**get the frequency of bar updates to increse as we enter Amber and red**
+**option resets in xh xm or a time**
 
 ---
 
 ## Tier 1 — High value, low complexity
 
 ### Dan
-**get the frequency of bar updates to increse as we enter Amber and red**
-**as soon as a session reaches 100% it should trigger a new session - make it an option**
-**option resets in xh xm or a time**
+**as soon as a session reaches 100%  and a session ends it should trigger a new session - make it an option**
 
 ### 1. Windows Toast Notifications
 **What:** Pop a native Windows notification when usage crosses a threshold (e.g., 80%, 90%, reset).

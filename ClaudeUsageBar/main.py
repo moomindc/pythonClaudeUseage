@@ -3,13 +3,15 @@
 # the bar window, system tray, config, and background fetch thread, then starts the
 # Qt event loop that keeps the app running until the user exits.
 
+import ctypes
+import ctypes.wintypes
 import logging
 import sys
 import threading
 from datetime import date, datetime, timedelta
 from typing import Optional
 
-from PyQt6.QtCore import QObject, QTimer, pyqtSignal
+from PyQt6.QtCore import QAbstractNativeEventFilter, QObject, QTimer, pyqtSignal
 from PyQt6.QtWidgets import QApplication, QDialog
 
 import config as cfg_mod
@@ -48,6 +50,26 @@ class _Bridge(QObject):
     data_ready = pyqtSignal(float, object, object)  # pct, reset_at, error_text
 
 
+# _PowerEventFilter
+# Listens for Windows WM_POWERBROADCAST messages on the Qt message pump. When the OS
+# signals PBT_APMRESUMEAUTOMATIC (automatic resume from sleep/hibernate), it calls the
+# supplied callback on the main thread so the bar can be re-shown without locks.
+class _PowerEventFilter(QAbstractNativeEventFilter):
+    _WM_POWERBROADCAST = 0x0218
+    _PBT_APMRESUMEAUTOMATIC = 0x0012
+
+    def __init__(self, callback) -> None:
+        super().__init__()
+        self._callback = callback
+
+    def nativeEventFilter(self, event_type, message):  # noqa: N802
+        if event_type == b"windows_generic_MSG":
+            msg = ctypes.wintypes.MSG.from_address(int(message))
+            if msg.message == self._WM_POWERBROADCAST and msg.wParam == self._PBT_APMRESUMEAUTOMATIC:
+                self._callback()
+        return False, 0
+
+
 # App
 # The central wiring class that owns every major component of the application: the
 # Qt event loop, config, polling timer, bar window, tray icon, and the bridge between
@@ -68,6 +90,7 @@ class App:
         self._triggered_today: dict[int, date] = {}
         self._alive = True
         self._current_interval_ms: int = 0
+        self._power_filter: Optional[_PowerEventFilter] = None
 
     # run
     # The main startup sequence. Shows the setup wizard if credentials are missing,
@@ -85,6 +108,7 @@ class App:
         self._start_polling()
         self._start_session_scheduler()
         self._update_tray_triple()
+        self._install_power_filter()
 
         log.info("Claude Usage Bar started")
         sys.exit(self._qt.exec())
@@ -333,6 +357,25 @@ class App:
         self._start_session_scheduler()
         self._update_tray_triple()
         log.info("Triple session %s", "enabled" if ts["enabled"] else "disabled")
+
+    # _install_power_filter
+    # Registers the native Windows power-event filter with the Qt application so that
+    # sleep/resume cycles can be detected and the bar re-shown automatically.
+    def _install_power_filter(self) -> None:
+        self._power_filter = _PowerEventFilter(self._on_resume)
+        self._qt.installNativeEventFilter(self._power_filter)
+
+    # _on_resume
+    # Called on the main thread when Windows signals a resume from sleep or hibernate.
+    # Re-shows the bar (Windows can suppress it during session transitions), re-checks
+    # its position in case display geometry changed, and triggers an immediate fetch.
+    def _on_resume(self) -> None:
+        log.info("System resumed from sleep — re-showing bar")
+        if self._bar:
+            self._bar.show()
+            self._bar.raise_()
+            self._bar._place_window()
+        self._spawn_fetch()
 
     # _on_exit
     # Handles the Exit action from the tray or context menu. Sets the alive flag to

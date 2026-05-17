@@ -84,6 +84,9 @@ from the cached reset timestamp — no extra network call needed.
 | `Auth error · right-click to fix` | Session key expired — reconfigure to paste a new one |
 | `Offline` | Network error — last known fill is retained; recovers on next poll |
 
+### RAG Red Amber Green
+
+Ay 80% and 90% the colour of the bar will change to Amber / Red, and the frequency of the updates performed also incresees to present a more accurate picture to the user. 
 ---
 
 ## Triple Session
