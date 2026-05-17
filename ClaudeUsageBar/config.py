@@ -34,6 +34,10 @@ _DEFAULTS: dict = {
         "work_start": "07:00",   # HH:MM local time — first session trigger of the day
         "prompt": "Hi",          # message sent to claude.ai to activate each session
     },
+    "notifications": {
+        "enabled": True,
+        "thresholds": [80, 90],  # fire a toast when usage first crosses these percentages
+    },
 }
 
 
@@ -52,6 +56,7 @@ def load() -> dict:
         merged["window"] = {**_DEFAULTS["window"], **data.get("window", {})}
         merged["colors"] = {**_DEFAULTS["colors"], **data.get("colors", {})}
         merged["triple_session"] = {**_DEFAULTS["triple_session"], **data.get("triple_session", {})}
+        merged["notifications"] = {**_DEFAULTS["notifications"], **data.get("notifications", {})}
         return merged
     except Exception:
         return _deep_copy_defaults()
@@ -82,4 +87,5 @@ def _deep_copy_defaults() -> dict:
     d["window"] = dict(_DEFAULTS["window"])
     d["colors"] = dict(_DEFAULTS["colors"])
     d["triple_session"] = dict(_DEFAULTS["triple_session"])
+    d["notifications"] = dict(_DEFAULTS["notifications"])
     return d

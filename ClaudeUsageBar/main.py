@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import QApplication, QDialog
 import config as cfg_mod
 import claude_client
 from bar_window import BarWindow
+from notifier import Notifier
 from tray import TrayIcon
 from wizard import WizardDialog
 
@@ -91,6 +92,7 @@ class App:
         self._alive = True
         self._current_interval_ms: int = 0
         self._power_filter: Optional[_PowerEventFilter] = None
+        self._notifier: Optional[Notifier] = None
 
     # run
     # The main startup sequence. Shows the setup wizard if credentials are missing,
@@ -104,6 +106,7 @@ class App:
 
         self._start_bar()
         self._start_tray()
+        self._notifier = Notifier(self._cfg)
         self._bridge.data_ready.connect(self._on_data)
         self._start_polling()
         self._start_session_scheduler()
@@ -307,6 +310,8 @@ class App:
     def _on_data(self, pct: float, reset_at, error_text) -> None:
         if self._bar:
             self._bar.set_data(pct, reset_at, error_text)
+        if self._notifier:
+            self._notifier.check(pct, reset_at)
         self._maybe_adjust_poll(pct)
 
     # _on_toggle
@@ -326,6 +331,8 @@ class App:
             self._cfg = cfg_mod.load()
             if self._bar:
                 self._bar._cfg = self._cfg
+            if self._notifier:
+                self._notifier._cfg = self._cfg
             self._start_polling()
             self._start_session_scheduler()
             self._update_tray_triple()
@@ -343,6 +350,8 @@ class App:
                 w = self._cfg.get("window", {}).get("width", 123)
                 self._bar.setFixedSize(w, 27)
                 self._bar.update()
+            if self._notifier:
+                self._notifier._cfg = self._cfg
             self._start_polling()
             self._start_session_scheduler()
             self._update_tray_triple()

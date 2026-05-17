@@ -52,6 +52,10 @@ class SettingsDialog(QDialog):
         root.addWidget(self._section_header("Triple Session"))
         root.addLayout(self._row_triple())
 
+        root.addWidget(self._separator())
+        root.addWidget(self._section_header("Notifications"))
+        root.addLayout(self._row_notifications())
+
         root.addStretch()
         root.addWidget(self._separator())
         root.addLayout(self._buttons())
@@ -141,6 +145,29 @@ class SettingsDialog(QDialog):
 
         return col
 
+    def _row_notifications(self) -> QVBoxLayout:
+        notif = self._cfg.get("notifications", {})
+        thresholds = notif.get("thresholds", [80, 90])
+        col = QVBoxLayout()
+        col.setSpacing(8)
+
+        self._notif_enabled = QCheckBox("Enabled")
+        self._notif_enabled.setChecked(notif.get("enabled", True))
+        col.addWidget(self._notif_enabled)
+
+        thresh_row = QHBoxLayout()
+        thresh_row.addWidget(QLabel("Alert at"))
+        thresh_row.addStretch()
+        self._notif_80 = QCheckBox("80%")
+        self._notif_80.setChecked(80 in thresholds)
+        self._notif_90 = QCheckBox("90%")
+        self._notif_90.setChecked(90 in thresholds)
+        thresh_row.addWidget(self._notif_80)
+        thresh_row.addWidget(self._notif_90)
+        col.addLayout(thresh_row)
+
+        return col
+
     def _buttons(self) -> QHBoxLayout:
         row = QHBoxLayout()
         row.addStretch()
@@ -185,5 +212,12 @@ class SettingsDialog(QDialog):
         t = self._triple_time.time()
         ts["work_start"] = f"{t.hour():02d}:{t.minute():02d}"
         ts["prompt"] = self._triple_prompt.text().strip() or "Hi"
+        thresholds = []
+        if self._notif_80.isChecked():
+            thresholds.append(80)
+        if self._notif_90.isChecked():
+            thresholds.append(90)
+        self._cfg.setdefault("notifications", {})["enabled"] = self._notif_enabled.isChecked()
+        self._cfg["notifications"]["thresholds"] = thresholds
         cfg_mod.save(self._cfg)
         self.accept()
