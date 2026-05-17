@@ -114,13 +114,16 @@ class BarWindow(QWidget):
 
     # _rag_override
     # When rag_mode is enabled in config, returns hardcoded (fill, text) colour strings
-    # at warning thresholds. Returns None when RAG mode is off or pct is below 80%.
+    # at warning thresholds. Returns None when RAG mode is off or pct is below the amber threshold.
     def _rag_override(self, pct: float) -> Optional[tuple[str, str]]:
         if not self._cfg.get("rag_mode", False):
             return None
-        if pct >= 90:
+        t = self._cfg.get("rag_thresholds", {})
+        red = t.get("red", 90)
+        amber = t.get("amber", 80)
+        if pct >= red:
             return (_RED_FILL, _RED_TEXT)
-        if pct >= 80:
+        if pct >= amber:
             return (_AMBER_FILL, _AMBER_TEXT)
         return None
 

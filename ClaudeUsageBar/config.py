@@ -38,6 +38,7 @@ _DEFAULTS: dict = {
         "enabled": True,
         "thresholds": [80, 90],  # fire a toast when usage first crosses these percentages
     },
+    "rag_thresholds": {"amber": 80, "red": 90},
 }
 
 
@@ -57,6 +58,7 @@ def load() -> dict:
         merged["colors"] = {**_DEFAULTS["colors"], **data.get("colors", {})}
         merged["triple_session"] = {**_DEFAULTS["triple_session"], **data.get("triple_session", {})}
         merged["notifications"] = {**_DEFAULTS["notifications"], **data.get("notifications", {})}
+        merged["rag_thresholds"] = {**_DEFAULTS["rag_thresholds"], **data.get("rag_thresholds", {})}
         return merged
     except Exception:
         return _deep_copy_defaults()
@@ -88,4 +90,5 @@ def _deep_copy_defaults() -> dict:
     d["colors"] = dict(_DEFAULTS["colors"])
     d["triple_session"] = dict(_DEFAULTS["triple_session"])
     d["notifications"] = dict(_DEFAULTS["notifications"])
+    d["rag_thresholds"] = dict(_DEFAULTS["rag_thresholds"])
     return d

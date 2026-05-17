@@ -22,7 +22,7 @@ class SettingsDialog(QDialog):
         self._cfg = cfg
         self._colors: dict[str, str] = dict(cfg.get("colors", {}))
         self.setWindowTitle("Claude Usage Bar — Settings")
-        self.setFixedWidth(420)
+        self.setFixedWidth(680)
         self.setModal(True)
         self._build()
 
@@ -31,32 +31,65 @@ class SettingsDialog(QDialog):
         root.setContentsMargins(20, 20, 20, 20)
         root.setSpacing(14)
 
-        root.addWidget(self._section_header("General"))
-        root.addLayout(self._row_spinbox(
+        # ---- Two-column body ----
+        columns = QHBoxLayout()
+        columns.setSpacing(0)
+
+        left = QVBoxLayout()
+        left.setSpacing(10)
+        right = QVBoxLayout()
+        right.setSpacing(10)
+
+        # Left: General
+        left.addWidget(self._section_header("General"))
+        left.addLayout(self._row_spinbox(
             "Poll interval (minutes)", "poll_interval_minutes",
             1, 60, self._cfg.get("poll_interval_minutes", 5),
         ))
-        root.addLayout(self._row_spinbox(
+        left.addLayout(self._row_spinbox(
             "Bar width (pixels)", "window_width",
             50, 400, self._cfg.get("window", {}).get("width", 123),
         ))
-        root.addLayout(self._row_reset_display())
+        left.addLayout(self._row_reset_display())
 
-        root.addWidget(self._separator())
-        root.addWidget(self._section_header("Colours"))
-        root.addLayout(self._row_color("Fill colour", "fill", "#14532D"))
-        root.addLayout(self._row_color("Background colour", "background", "#030A05"))
-        root.addLayout(self._row_color("Text colour", "text", "#86EFAC"))
+        left.addWidget(self._separator())
+        left.addWidget(self._section_header("Colours"))
+        left.addLayout(self._row_color("Fill colour", "fill", "#14532D"))
+        left.addLayout(self._row_color("Background colour", "background", "#030A05"))
+        left.addLayout(self._row_color("Text colour", "text", "#86EFAC"))
 
-        root.addWidget(self._separator())
-        root.addWidget(self._section_header("Triple Session"))
-        root.addLayout(self._row_triple())
+        left.addWidget(self._separator())
+        left.addWidget(self._section_header("Triple Session"))
+        left.addLayout(self._row_triple())
 
-        root.addWidget(self._separator())
-        root.addWidget(self._section_header("Notifications"))
-        root.addLayout(self._row_notifications())
+        left.addStretch()
 
-        root.addStretch()
+        # Vertical divider
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.VLine)
+        divider.setFrameShadow(QFrame.Shadow.Sunken)
+
+        # Right: RAG Mode first so signals can wire to notification labels
+        right.addWidget(self._section_header("RAG Mode"))
+        right.addLayout(self._row_rag())
+
+        right.addWidget(self._separator())
+        right.addWidget(self._section_header("Notifications"))
+        right.addLayout(self._row_notifications())
+
+        right.addStretch()
+
+        # Wire RAG spinboxes → notification label updates
+        self._rag_amber.valueChanged.connect(self._update_notif_labels)
+        self._rag_red.valueChanged.connect(self._update_notif_labels)
+
+        columns.addLayout(left, stretch=1)
+        columns.addSpacing(16)
+        columns.addWidget(divider)
+        columns.addSpacing(16)
+        columns.addLayout(right, stretch=1)
+
+        root.addLayout(columns)
         root.addWidget(self._separator())
         root.addLayout(self._buttons())
 
@@ -84,7 +117,7 @@ class SettingsDialog(QDialog):
         spin = QSpinBox()
         spin.setRange(lo, hi)
         spin.setValue(int(val))
-        spin.setFixedWidth(200)
+        spin.setFixedWidth(90)
         setattr(self, f"_{attr}", spin)
         row.addWidget(spin)
         return row
@@ -116,12 +149,10 @@ class SettingsDialog(QDialog):
         col = QVBoxLayout()
         col.setSpacing(8)
 
-        # Enabled checkbox
         self._triple_enabled = QCheckBox("Enabled")
         self._triple_enabled.setChecked(ts.get("enabled", False))
         col.addWidget(self._triple_enabled)
 
-        # Work start time
         time_row = QHBoxLayout()
         time_row.addWidget(QLabel("First session starts at"))
         time_row.addStretch()
@@ -129,25 +160,61 @@ class SettingsDialog(QDialog):
         self._triple_time.setDisplayFormat("HH:mm")
         h, m = map(int, ts.get("work_start", "07:00").split(":"))
         self._triple_time.setTime(QTime(h, m))
-        self._triple_time.setFixedWidth(200)
+        self._triple_time.setFixedWidth(90)
         time_row.addWidget(self._triple_time)
         col.addLayout(time_row)
 
-        # Prompt
         prompt_row = QHBoxLayout()
         prompt_row.addWidget(QLabel("Trigger prompt"))
         prompt_row.addStretch()
         self._triple_prompt = QLineEdit()
         self._triple_prompt.setText(ts.get("prompt", "Hi"))
-        self._triple_prompt.setFixedWidth(200)
+        self._triple_prompt.setFixedWidth(90)
         prompt_row.addWidget(self._triple_prompt)
         col.addLayout(prompt_row)
+
+        return col
+
+    def _row_rag(self) -> QVBoxLayout:
+        t = self._cfg.get("rag_thresholds", {"amber": 80, "red": 90})
+        col = QVBoxLayout()
+        col.setSpacing(8)
+
+        self._rag_enabled = QCheckBox("Enabled")
+        self._rag_enabled.setChecked(self._cfg.get("rag_mode", False))
+        col.addWidget(self._rag_enabled)
+
+        amber_row = QHBoxLayout()
+        amber_row.addWidget(QLabel("Amber threshold"))
+        amber_row.addStretch()
+        self._rag_amber = QSpinBox()
+        self._rag_amber.setRange(1, 99)
+        self._rag_amber.setValue(t.get("amber", 80))
+        self._rag_amber.setSuffix("%")
+        self._rag_amber.setFixedWidth(90)
+        amber_row.addWidget(self._rag_amber)
+        col.addLayout(amber_row)
+
+        red_row = QHBoxLayout()
+        red_row.addWidget(QLabel("Red threshold"))
+        red_row.addStretch()
+        self._rag_red = QSpinBox()
+        self._rag_red.setRange(1, 100)
+        self._rag_red.setValue(t.get("red", 90))
+        self._rag_red.setSuffix("%")
+        self._rag_red.setFixedWidth(90)
+        red_row.addWidget(self._rag_red)
+        col.addLayout(red_row)
 
         return col
 
     def _row_notifications(self) -> QVBoxLayout:
         notif = self._cfg.get("notifications", {})
         thresholds = notif.get("thresholds", [80, 90])
+        t = self._cfg.get("rag_thresholds", {"amber": 80, "red": 90})
+        amber_val = t.get("amber", 80)
+        red_val = t.get("red", 90)
+
         col = QVBoxLayout()
         col.setSpacing(8)
 
@@ -155,18 +222,19 @@ class SettingsDialog(QDialog):
         self._notif_enabled.setChecked(notif.get("enabled", True))
         col.addWidget(self._notif_enabled)
 
-        thresh_row = QHBoxLayout()
-        thresh_row.addWidget(QLabel("Alert at"))
-        thresh_row.addStretch()
-        self._notif_80 = QCheckBox("80%")
-        self._notif_80.setChecked(80 in thresholds)
-        self._notif_90 = QCheckBox("90%")
-        self._notif_90.setChecked(90 in thresholds)
-        thresh_row.addWidget(self._notif_80)
-        thresh_row.addWidget(self._notif_90)
-        col.addLayout(thresh_row)
+        self._notif_amber = QCheckBox(f"Amber ({amber_val}%)")
+        self._notif_amber.setChecked(amber_val in thresholds)
+        col.addWidget(self._notif_amber)
+
+        self._notif_red = QCheckBox(f"Red ({red_val}%)")
+        self._notif_red.setChecked(red_val in thresholds)
+        col.addWidget(self._notif_red)
 
         return col
+
+    def _update_notif_labels(self) -> None:
+        self._notif_amber.setText(f"Amber ({self._rag_amber.value()}%)")
+        self._notif_red.setText(f"Red ({self._rag_red.value()}%)")
 
     def _buttons(self) -> QHBoxLayout:
         row = QHBoxLayout()
@@ -212,11 +280,14 @@ class SettingsDialog(QDialog):
         t = self._triple_time.time()
         ts["work_start"] = f"{t.hour():02d}:{t.minute():02d}"
         ts["prompt"] = self._triple_prompt.text().strip() or "Hi"
+        self._cfg["rag_mode"] = self._rag_enabled.isChecked()
+        self._cfg.setdefault("rag_thresholds", {})["amber"] = self._rag_amber.value()
+        self._cfg["rag_thresholds"]["red"] = self._rag_red.value()
         thresholds = []
-        if self._notif_80.isChecked():
-            thresholds.append(80)
-        if self._notif_90.isChecked():
-            thresholds.append(90)
+        if self._notif_amber.isChecked():
+            thresholds.append(self._rag_amber.value())
+        if self._notif_red.isChecked():
+            thresholds.append(self._rag_red.value())
         self._cfg.setdefault("notifications", {})["enabled"] = self._notif_enabled.isChecked()
         self._cfg["notifications"]["thresholds"] = thresholds
         cfg_mod.save(self._cfg)
