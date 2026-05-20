@@ -8,12 +8,6 @@ slim always-on-top progress bar with a live countdown to the next reset.
 │████████████████████░░░░░░░  resets in 3h 22m │
 └──────────────────────────────────────────────┘
 ```
-
-- **Navy blue** = tokens used
-- **Near-black** = tokens remaining
-- **White text** = time until the usage window resets
-- Bar is 22 px tall, ~450 px wide, always on top, draggable anywhere on screen
-
 ---
 
 ## Features
@@ -65,7 +59,7 @@ See [`FUTURE-ENHANCEMENTS.md`](FUTURE-ENHANCEMENTS.md) for the complete backlog 
 | Requirement | Version |
 |-------------|---------|
 | Windows     | 10 or 11 |
-| Python      | 3.11 or later (tested on 3.14) |
+| Python      | 3.11 or later (tested on 3.14.2) |
 | Claude.ai account | Pro, Team, or Max subscription |
 
 Install Python from [python.org](https://www.python.org/downloads/) if needed.
@@ -128,9 +122,11 @@ from the cached reset timestamp — no extra network call needed.
 | `Auth error · right-click to fix` | Session key expired — reconfigure to paste a new one |
 | `Offline` | Network error — last known fill is retained; recovers on next poll |
 
-### RAG Red Amber Green
+### RAG Mode (Red Amber Green)
 
-Ay 80% and 90% the colour of the bar will change to Amber / Red, and the frequency of the updates performed also incresees to present a more accurate picture to the user. 
+At 80% and 90% the colour of the bar will change to Amber and Red respectively, and the polling frequency automatically increases for more frequent updates.
+You can customize the amber and red thresholds in Settings — notifications fire when usage first crosses these levels.
+
 ---
 
 ## Triple Session
@@ -211,9 +207,18 @@ the tray icon):
 |---------|-------|-------------|
 | Poll interval | 1–60 min | How often to fetch usage from claude.ai |
 | Bar width | 50–400 px | Width of the floating bar |
-| Fill colour | colour picker | Colour of the used-tokens portion |
+| Reset countdown style | clock / countdown | Display reset time as "Resets in 3h 22m" or "Resets at 15:30" |
+| Fill colour | colour picker | Colour of the used-tokens portion (overridden by RAG mode) |
 | Background colour | colour picker | Colour of the unused-tokens portion |
 | Text colour | colour picker | Colour of the countdown and percentage text |
+| RAG Mode enabled | checkbox | Enable/disable colour changes at amber/red thresholds |
+| Amber threshold | 1–99% | Usage % where bar turns amber and polling frequency increases |
+| Red threshold | 1–100% | Usage % where bar turns red and polling frequency increases further |
+| Notifications enabled | checkbox | Enable/disable Windows notifications |
+| Notify at amber | checkbox | Fire notification when usage reaches amber threshold |
+| Notify at red | checkbox | Fire notification when usage reaches red threshold |
+| Opacity | 30–100% | Bar transparency (lower = more transparent) |
+| Click-through mode | checkbox | Allow mouse events to pass through the bar to windows beneath |
 | Triple Session enabled | checkbox | Enable/disable the session scheduler |
 | First session starts at | time picker | Work-start time for the session schedule |
 | Trigger prompt | text field | Message sent to activate each session |
@@ -236,24 +241,79 @@ You can also edit it directly in any text editor (changes take effect on next la
   "window": {
     "x": 1200,
     "y": 10,
-    "width": 450
+    "width": 123
   },
   "colors": {
     "fill": "#14532D",
     "background": "#030A05",
     "text": "#86EFAC"
+  },
+  "reset_display": "countdown",
+  "rag_mode": false,
+  "rag_thresholds": {
+    "amber": 80,
+    "red": 90
+  },
+  "notifications": {
+    "enabled": true,
+    "thresholds": [80, 90]
+  },
+  "opacity": 1.0,
+  "click_through": false,
+  "triple_session": {
+    "enabled": false,
+    "work_start": "07:00",
+    "prompt": "Hi"
   }
 }
 ```
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| `poll_interval_minutes` | `5` | How often to fetch usage from claude.ai |
-| `window.width` | `123` | Bar width in pixels |
-| `window.x` / `window.y` | top-right corner | Bar position (updated automatically on drag) |
-| `colors.fill` | `#14532D` | Used-tokens bar colour |
-| `colors.background` | `#030A05` | Unused-tokens bar colour |
-| `colors.text` | `#86EFAC` | Countdown and percentage text colour |
+| `poll_interval_minutes` | `5` | How often to fetch usage from claude.ai (1–60 minutes) |
+| `window.width` | `123` | Bar width in pixels (50–400) |
+| `window.x` / `window.y` | calculated | Bar position (updated automatically on drag) |
+| `colors.fill` | `#14532D` | Used-tokens bar colour (hex colour code) |
+| `colors.background` | `#030A05` | Unused-tokens bar colour (hex colour code) |
+| `colors.text` | `#86EFAC` | Countdown and percentage text colour (hex colour code) |
+| `reset_display` | `"countdown"` | How to display reset time: `"countdown"` or `"clock"` |
+| `rag_mode` | `false` | Enable/disable colour changes at warning thresholds |
+| `rag_thresholds.amber` | `80` | Usage % where bar turns amber (1–99) |
+| `rag_thresholds.red` | `90` | Usage % where bar turns red (1–100) |
+| `notifications.enabled` | `true` | Enable/disable Windows toast notifications |
+| `notifications.thresholds` | `[80, 90]` | Array of percentages where notifications fire (e.g. `[80, 90]`, `[75]`, `[]`) |
+| `opacity` | `1.0` | Bar opacity as decimal: 0.30–1.0 (0.30 = 30%, 1.0 = 100%) |
+| `click_through` | `false` | If `true`, mouse events pass through to windows beneath the bar |
+| `triple_session.enabled` | `false` | Enable/disable the automatic session activation scheduler |
+| `triple_session.work_start` | `"07:00"` | First session trigger time (24-hour format: `"HH:MM"`) |
+| `triple_session.prompt` | `"Hi"` | Message sent to claude.ai to activate each session window |
+
+---
+
+## Opacity and Click-through Mode
+
+### Opacity
+
+The **Opacity** slider (30–100%) controls how transparent the bar is. A lower value makes the bar more see-through:
+
+- **100%** — Fully opaque (no transparency)
+- **50%** — Semi-transparent, blend with background
+- **30%** — Nearly invisible, subtle presence
+
+This is useful if the bar blocks content beneath it or you prefer it to blend into the desktop.
+
+### Click-through Mode
+
+When **Click-through mode** is enabled, the bar becomes transparent to mouse events — clicks and drags pass straight through to whatever window sits beneath it. This is useful if:
+
+- You want the bar to monitor usage without blocking interactions
+- You frequently click on the area where the bar sits
+
+**Important:** When click-through is enabled, you cannot click the bar itself. Instead:
+- Use the **system tray icon** to toggle visibility, reconfigure, or adjust settings
+- Right-click the tray icon to access the context menu
+
+If you enable click-through accidentally and lose access to the bar, you can still right-click the tray icon to open Settings and turn it off.
 
 ---
 
@@ -307,6 +367,16 @@ Useful for diagnosing network errors or unexpected API responses.
 - The most likely cause is a change to the claude.ai internal API — look for the HTTP status code in the log
 - Confirm Triple Session is enabled: right-click tray → the item should read `Triple Session: ON ✓`
 - Make sure `work_start` in config.json is in `HH:MM` 24-hour format (e.g. `"07:00"`, not `"7:00 AM"`) — the Settings dialog enforces this automatically
+
+**Click-through mode prevents me from clicking the bar**
+- This is intentional — when click-through is enabled, mouse events pass through to windows beneath
+- Use the **system tray icon** to access Settings, Reconfigure, or other options
+- Right-click the tray icon → select Settings → turn off Click-through mode to restore bar interactions
+
+**Bar shows different display format suddenly (countdown vs clock time)**
+- Check Settings → Reset countdown style to confirm your preference
+- Changes take effect immediately when you click Save
+- The format is also configurable via `config.json` using the `reset_display` key
 
 ---
 
