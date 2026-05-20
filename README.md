@@ -16,6 +16,50 @@ slim always-on-top progress bar with a live countdown to the next reset.
 
 ---
 
+## Features
+
+### Core
+- **Floating progress bar** — Always-on-top 27px bar showing usage % with live countdown to reset
+- **Drag-to-reposition** — Click and drag to move; position is saved automatically
+- **System tray integration** — Control visibility, toggle Triple Session, access settings, and exit from the tray icon
+- **Multiple colour profiles** — Fully customizable fill, background, and text colours via settings
+
+### Monitoring
+- **Adaptive polling** — Base interval (default 5 minutes) automatically increases when usage enters amber (≥80%) or red (≥90%)
+- **RAG mode indicators** — Bar colour changes to amber at 80%, red at 90%; thresholds are configurable
+- **Tray tooltip** — Hover the tray icon to see current usage percentage and time until session resets
+- **Toast notifications** — Windows notifications fire when usage crosses configured thresholds
+- **Network resilience** — On network error, bar retains last known fill level; recovers automatically on next poll
+
+### Configuration
+- **In-app settings dialog** — Adjust poll interval (1–60 min), bar width (50–400 px), colours, RAG thresholds, notifications, and triple session settings without touching config files
+- **Opacity control** — Adjustable bar opacity (30–100%) for better desktop blending
+- **Click-through mode** — Enable pass-through input so the bar doesn't interfere with interactions beneath it
+- **Right-click context menu** — Quick access to Settings, Reconfigure, and Exit
+
+### Session Management
+- **Triple Session scheduler** — Automatically activate four staggered 5-hour sessions aligned to your working hours (default: 7 AM, 12 PM, 5 PM, 10 PM)
+- **Automatic session reset detection** — Bar shows "resetting…" and resets to 0% when the 5-hour window resets
+- **Setup wizard** — Three-page on-first-launch wizard for session key entry and automatic organisation discovery
+- **Auth error recovery** — Clear error messaging when session key expires; quick path to reconfigure
+
+### System Integration
+- **Suspend/resume handling** — Bar re-shows automatically when system resumes from sleep
+- **Always-on-top behaviour** — Never obscured by other windows unless they also use always-on-top (Windows limitation)
+- **Taskbar integration** — System tray icon with menu; bar is hidden from taskbar
+
+---
+
+## Roadmap
+
+See [`FUTURE-ENHANCEMENTS.md`](FUTURE-ENHANCEMENTS.md) for the complete backlog of planned features, including:
+- **Tier 1** — High-value quick wins (auto-start, force-refresh, tray icon RAG colour, etc.)
+- **Tier 2** — Medium-complexity features (multi-monitor support, usage history, session counting, etc.)
+- **Tier 3** — Ambitious longer-term items (API tracking, sparkline visualisation, adaptive thresholds, etc.)
+- **Broader tools** — Standalone utilities in the Claude ecosystem (quick-ask bar, screenshot-to-Claude, prompt library, etc.)
+
+---
+
 ## Prerequisites
 
 | Requirement | Version |
