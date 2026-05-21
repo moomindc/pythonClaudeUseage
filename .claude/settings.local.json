@@ -15,7 +15,11 @@
       "Bash(Get-ChildItem -Recurse -File -Filter \"*.py\")",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(py -c \"import bar_window; import tray; import settings_dialog; print\\('imports OK'\\)\")",
-      "Bash(py -c ' *)"
+      "Bash(py -c ' *)",
+      "PowerShell([System.Guid]::NewGuid\\(\\).ToString\\(\\).ToUpper\\(\\))",
+      "PowerShell(py *)",
+      "PowerShell(Stop-Process *)",
+      "PowerShell(Get-Content *)"
     ]
   }
 }

@@ -69,6 +69,23 @@ Make sure to tick **"Add Python to PATH"** during installation.
 
 ## Installation
 
+### Option A — Installer (no Python required)
+
+Run `ClaudeUsageBar_Setup.exe`. It bundles Python and all dependencies, adds a Start
+Menu entry and uninstaller, and offers a **"Start ClaudeUsageBar with Windows"**
+checkbox (ticked by default).
+
+- **SmartScreen warning:** the installer is unsigned, so Windows may show "Windows
+  protected your PC" on first run. Click **More info → Run anyway**.
+- **Your session key persists after uninstall.** Uninstalling removes the app but
+  intentionally leaves your settings — including the saved `sessionKey` — in
+  `%APPDATA%\ClaudeUsageBar\config.json` so a reinstall remembers them. To wipe the
+  credential, delete that folder manually.
+
+To build the installer yourself, see `packaging-plan.md`.
+
+### Option B — Run from source
+
 ```
 cd ClaudeUsageBar
 py -m pip install -r requirements.txt

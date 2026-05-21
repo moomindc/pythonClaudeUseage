@@ -1,1 +1,1 @@
-# Virtual environments venv/ .venv/ # PyCharm .idea/ # Compiled Python __pycache__/ *.pyc *.pyo # Secrets .env *.env # Build output dist/ build/ *.egg-info/ # OS junk Thumbs.db desktop.ini
+# Virtual environments venv/ .venv/ # PyCharm .idea/ # Compiled Python __pycache__/ *.pyc *.pyo # Secrets .env *.env # Build output dist/ build/ installer_output/ *.egg-info/ # OS junk Thumbs.db desktop.ini
